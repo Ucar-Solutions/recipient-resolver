@@ -25,17 +25,17 @@ final readonly class YamlRecipientProvider implements RecipientProviderInterface
         $blindCarbonCopy = [];
         foreach ($yamlContent as $list => $config) {
 
-            foreach ($config['recipient'] as $recipient) {
+            foreach ($config['receiver'] ?? [] as $recipient) {
                 if ($this->isLikelyEmail($recipient)) {
                     $recipients[] = $recipient;
                 }
             }
-            foreach ($config['cc'] as $cc) {
+            foreach ($config['cc'] ?? [] as $cc) {
                 if ($this->isLikelyEmail($cc)) {
                     $carbonCopy[] = $cc;
                 }
             }
-            foreach ($config['bcc'] as $bcc) {
+            foreach ($config['bcc'] ?? [] as $bcc) {
                 if ($this->isLikelyEmail($bcc)) {
                     $blindCarbonCopy[] = $bcc;
                 }
@@ -43,7 +43,7 @@ final readonly class YamlRecipientProvider implements RecipientProviderInterface
 
 
             $result[$list] = new Recipient(
-                recipients: $recipients,
+                receiver: $recipients,
                 carbonCopy: $carbonCopy,
                 blindCarbonCopy: $blindCarbonCopy
             );

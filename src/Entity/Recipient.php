@@ -8,16 +8,16 @@ use JsonSerializable;
 readonly class Recipient implements JsonSerializable
 {
     public function __construct(
-        private array $recipients,
+        private array $receiver,
         private array $carbonCopy,
         private array $blindCarbonCopy,
     )
     {
     }
 
-    public function getRecipients(): array
+    public function getReceiver(): array
     {
-        return $this->recipients;
+        return $this->receiver;
     }
 
     public function getCarbonCopy(): array
@@ -33,7 +33,7 @@ readonly class Recipient implements JsonSerializable
     public function jsonSerialize(): array
     {
         return [
-            'recipient' => $this->getRecipients(),
+            'recipient' => $this->getReceiver(),
             'carbonCopy' => $this->getCarbonCopy(),
             'blindCarbonCopy' => $this->getBlindCarbonCopy()
         ];
