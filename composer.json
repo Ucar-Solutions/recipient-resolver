@@ -1,0 +1,29 @@
+{
+    "name": "ucarsolutions/recipient-resolver",
+    "description": "simple leightweight key and environment based recipient resolver service",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Ucarsolutions\\RecipientResolver\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Test\\Ucarsolutions\\RecipientResolver\\": "test/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Dogan Ucar",
+            "email": "dogan@dogan-ucar.de"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "symfony/yaml": "^7.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.4"
+    }
+}
