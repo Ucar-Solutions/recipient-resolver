@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Ucarsolutions\RecipientResolver\Service;
 
+use Ucarsolutions\RecipientResolver\Entity\NullRecipient;
+use Ucarsolutions\RecipientResolver\Entity\Recipient;
 use Ucarsolutions\RecipientResolver\Provider\RecipientProviderInterface;
 
 final readonly class RecipientResolver implements RecipientResolverInterface
@@ -17,10 +19,10 @@ final readonly class RecipientResolver implements RecipientResolverInterface
         return $this->provider->provide();
     }
 
-    public function resolve(string $list): array
+    public function resolve(string $list): Recipient
     {
         $recipients = $this->provider->provide();
-        return $recipients[$list] ?? [];
+        return $recipients[$list] ?? new NullRecipient();
     }
 
 }

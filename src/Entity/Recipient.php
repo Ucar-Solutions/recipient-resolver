@@ -5,7 +5,7 @@ namespace Ucarsolutions\RecipientResolver\Entity;
 
 use JsonSerializable;
 
-final readonly class Recipient implements JsonSerializable
+readonly class Recipient implements JsonSerializable
 {
     public function __construct(
         private array $recipients,
