@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Ucarsolutions\RecipientResolver\Provider;
 
 use Symfony\Component\Yaml\Yaml;
+use Ucarsolutions\RecipientResolver\Entity\Recipient;
 
 final readonly class YamlRecipientProvider implements RecipientProviderInterface
 {
@@ -12,22 +13,42 @@ final readonly class YamlRecipientProvider implements RecipientProviderInterface
     }
 
     /**
-     * @return array<string,array<int,string>>
+     * @return array<string,Recipient>
      */
     public function provide(): array
     {
         $result = [];
-        $yamlContent = Yaml::parse(file_get_contents($this->path));
-        foreach ($yamlContent as $list => $recipients) {
-            $r = [];
-            foreach ($recipients as $recipient) {
-                if (!$this->isLikelyEmail($recipient)) {
-                    continue;
+        $yamlContent = Yaml::parseFile($this->path);
+
+        $recipients = [];
+        $carbonCopy = [];
+        $blindCarbonCopy = [];
+        foreach ($yamlContent as $list => $config) {
+
+            foreach ($config['recipient'] as $recipient) {
+                if ($this->isLikelyEmail($recipient)) {
+                    $recipients[] = $recipient;
                 }
-                $r[] = $recipient;
             }
-            $result[$list] = $r;
+            foreach ($config['cc'] as $cc) {
+                if ($this->isLikelyEmail($cc)) {
+                    $carbonCopy[] = $cc;
+                }
+            }
+            foreach ($config['bcc'] as $bcc) {
+                if ($this->isLikelyEmail($bcc)) {
+                    $blindCarbonCopy[] = $bcc;
+                }
+            }
+
+
+            $result[$list] = new Recipient(
+                recipients: $recipients,
+                carbonCopy: $carbonCopy,
+                blindCarbonCopy: $blindCarbonCopy
+            );
         }
+
         return $result;
     }
 
