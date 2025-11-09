@@ -20,11 +20,10 @@ final readonly class YamlRecipientProvider implements RecipientProviderInterface
         $result = [];
         $yamlContent = Yaml::parseFile($this->path);
 
-        $recipients = [];
-        $carbonCopy = [];
-        $blindCarbonCopy = [];
         foreach ($yamlContent as $list => $config) {
-
+            $recipients = [];
+            $carbonCopy = [];
+            $blindCarbonCopy = [];
             foreach ($config['receiver'] ?? [] as $recipient) {
                 if ($this->isLikelyEmail($recipient)) {
                     $recipients[] = $recipient;
