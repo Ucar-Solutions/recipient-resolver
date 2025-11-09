@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace Test\Ucarsolutions\RecipientResolver;
 
 use PHPUnit\Framework\TestCase;
+use Ucarsolutions\RecipientResolver\Entity\Recipient;
 use Ucarsolutions\RecipientResolver\Provider\YamlRecipientProvider;
 
 final class YamlRecipientProviderTest extends TestCase
@@ -13,6 +14,9 @@ final class YamlRecipientProviderTest extends TestCase
     protected function setUp(): void
     {
         $this->tmpFile = tempnam(sys_get_temp_dir(), 'yamlrecips_');
+        if ($this->tmpFile === false) {
+            self::fail('Could not create temporary file for YAML test.');
+        }
     }
 
     protected function tearDown(): void
@@ -29,68 +33,117 @@ final class YamlRecipientProviderTest extends TestCase
     {
         $this->writeYaml(<<<YAML
 alerts:
-  - alerts@example.com
+  receiver:
+    - alerts@example.com
+  cc:
+    - cc1@example.com
+    - cc2@example.com
+  bcc:
+    - b1@example.com
 billing:
-  - billing@example.com
-  - finance@example.com
+  receiver:
+    - billing@example.com
+    - finance@example.com
+  cc: []
+  bcc: []
 YAML
         );
-        $provider = new YamlRecipientProvider($this->tmpFile);
 
+        $provider = new YamlRecipientProvider($this->tmpFile);
         $out = $provider->provide();
 
-        $this->assertSame([
-            'alerts' => ['alerts@example.com'],
-            'billing' => ['billing@example.com', 'finance@example.com'],
-        ], $out);
+        self::assertIsArray($out);
+        self::assertArrayHasKey('alerts', $out);
+        self::assertArrayHasKey('billing', $out);
+
+        self::assertInstanceOf(Recipient::class, $out['alerts']);
+        self::assertSame(['alerts@example.com'], $out['alerts']->getReceiver());
+        self::assertSame(['cc1@example.com', 'cc2@example.com'], $out['alerts']->getCarbonCopy());
+        self::assertSame(['b1@example.com'], $out['alerts']->getBlindCarbonCopy());
+
+        self::assertInstanceOf(Recipient::class, $out['billing']);
+        self::assertSame(['billing@example.com', 'finance@example.com'], $out['billing']->getReceiver());
+        self::assertSame([], $out['billing']->getCarbonCopy());
+        self::assertSame([], $out['billing']->getBlindCarbonCopy());
+
+        // JSON shape (smoke test)
+        $json = json_encode($out['alerts'], JSON_THROW_ON_ERROR);
+        self::assertIsString($json);
+        self::assertStringContainsString('"recipient":["alerts@example.com"]', $json);
+        self::assertStringContainsString('"carbonCopy":["cc1@example.com","cc2@example.com"]', $json);
+        self::assertStringContainsString('"blindCarbonCopy":["b1@example.com"]', $json);
     }
 
-    public function testProvideSkipsInvalidEmails(): void
+    public function testProvideSkipsInvalidEmailsAcrossAllLists(): void
     {
         $this->writeYaml(<<<YAML
 ops:
-  - oncall@example.com
-  - "not-an-email"
-  - "also@invalid@double"
+  receiver:
+    - oncall@example.com
+    - "not-an-email"
+    - "also@invalid@double"
+  cc:
+    - "valid.cc@example.com"
+    - "bad cc"
+  bcc:
+    - "also-bad"
+    - "valid.bcc@example.com"
 YAML
         );
-        $provider = new YamlRecipientProvider($this->tmpFile);
 
+        $provider = new YamlRecipientProvider($this->tmpFile);
         $out = $provider->provide();
 
-        $this->assertSame([
-            'ops' => ['oncall@example.com'],
-        ], $out);
+        self::assertArrayHasKey('ops', $out);
+        $rec = $out['ops'];
+        self::assertInstanceOf(Recipient::class, $rec);
+
+        self::assertSame(['oncall@example.com'], $rec->getReceiver());
+        self::assertSame(['valid.cc@example.com'], $rec->getCarbonCopy());
+        self::assertSame(['valid.bcc@example.com'], $rec->getBlindCarbonCopy());
     }
 
     public function testProvideHandlesEmptyListsAndKeepsDuplicates(): void
     {
         $this->writeYaml(<<<YAML
-empty-list: []
+empty:
+  receiver: []
+  cc: []
+  bcc: []
 dupes:
-  - a@example.com
-  - a@example.com
+  receiver:
+    - a@example.com
+    - a@example.com
+  cc:
+    - c@example.com
+    - c@example.com
+  bcc:
+    - b@example.com
+    - b@example.com
 YAML
         );
-        $provider = new YamlRecipientProvider($this->tmpFile);
 
+        $provider = new YamlRecipientProvider($this->tmpFile);
         $out = $provider->provide();
 
-        // Leerlisten bleiben leer; Duplikate bleiben (Provider dedupliziert nicht)
-        $this->assertSame([
-            'empty-list' => [],
-            'dupes' => ['a@example.com', 'a@example.com'],
-        ], $out);
+        self::assertArrayHasKey('empty', $out);
+        self::assertSame([], $out['empty']->getReceiver());
+        self::assertSame([], $out['empty']->getCarbonCopy());
+        self::assertSame([], $out['empty']->getBlindCarbonCopy());
+
+        self::assertArrayHasKey('dupes', $out);
+        self::assertSame(['a@example.com', 'a@example.com'], $out['dupes']->getReceiver());
+        self::assertSame(['c@example.com', 'c@example.com'], $out['dupes']->getCarbonCopy());
+        self::assertSame(['b@example.com', 'b@example.com'], $out['dupes']->getBlindCarbonCopy());
     }
 
     public function testProvideWithTopLevelEmptyMap(): void
     {
-        // Leere Map statt leerer Datei (Yaml::parse('') würde null liefern)
         $this->writeYaml("{}\n");
-        $provider = new YamlRecipientProvider($this->tmpFile);
 
+        $provider = new YamlRecipientProvider($this->tmpFile);
         $out = $provider->provide();
 
-        $this->assertSame([], $out);
+        self::assertSame([], $out);
     }
 }
